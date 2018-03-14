@@ -10,14 +10,20 @@ namespace VCSCompiler
     internal class Graph<T> where T: class
     {
 		private IList<Node<T>> Nodes = new List<Node<T>>();
-		private Node<T> Root;
+		private Node<T> _Root;
+		public Node<T> Root => _Root;
 
 		public IImmutableList<Node<T>> AllNodes => Nodes.ToImmutableList();
 
 		public void AddRootNode(T root)
 		{
-			Root = new Node<T>(root);
-			Nodes.Add(Root);
+			if (_Root != null)
+			{
+				throw new InvalidOperationException("Root is already set.");
+			}
+
+			_Root = new Node<T>(root);
+			Nodes.Add(_Root);
 		}
 
 		public void AddEdge(T from, T to)
