@@ -4,7 +4,7 @@ using static VCSFramework.Memory;
 
 static class Evolving
 {
-	static byte a;
+	static byte a = 12;
 	static bool ShouldLoop;
 
 	public static void Main()

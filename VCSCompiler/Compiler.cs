@@ -158,7 +158,7 @@ namespace VCSCompiler
 		{
 			foreach (var type in cecilTypes)
 			{
-				if (!TypeChecker.IsValidType(type, Types, out var typeError))
+				if (!TypeChecker.IsValidType(type, Types, entryPoint, out var typeError))
 				{
 					throw new FatalCompilationException(typeError);
 				}
@@ -235,7 +235,16 @@ namespace VCSCompiler
 		private CompiledType CompileType(ProcessedType processedType)
 		{
 			var compiledSubroutines = new List<CompiledSubroutine>();
-			foreach(var subroutine in processedType.Subroutines)
+			var subroutines = processedType.Subroutines.ToList();
+			// If there is a cctor, compile it first.
+			// TODO - CALL GRAPH
+			var cctor = subroutines.SingleOrDefault(ps => ps.Name == ".cctor");
+			if (cctor != null)
+			{
+				subroutines.Remove(cctor);
+				subroutines.Insert(0, cctor);
+			}
+			foreach(var subroutine in subroutines)
 			{
 				Console.WriteLine($"Compiling {subroutine.FullName}");
 				if (subroutine.TryGetFrameworkAttribute<UseProvidedImplementationAttribute>(out var providedImplementation))
@@ -270,7 +279,8 @@ namespace VCSCompiler
 				if (subroutine.IsEntryPoint)
 				{
 					Console.WriteLine("Injecting entry point code.");
-					body = GetEntryPointPrependedCode().Concat(body);
+					var compiledCctor = compiledSubroutines.SingleOrDefault(cs => cs.Name == ".cctor");
+					body = GetEntryPointPrependedCode(compiledCctor).Concat(body);
 				}
 				var compiledSubroutine = new CompiledSubroutine(subroutine, body);
 				compiledSubroutines.Add(compiledSubroutine);
@@ -279,7 +289,7 @@ namespace VCSCompiler
 			return new CompiledType(processedType, compiledSubroutines);
 		}
 
-		private IEnumerable<AssemblyLine> GetEntryPointPrependedCode()
+		private IEnumerable<AssemblyLine> GetEntryPointPrependedCode(CompiledSubroutine cctor)
 		{
 			yield return Comment("Begin injected entry point code.");
 
@@ -295,7 +305,16 @@ namespace VCSCompiler
 			{
 				yield return line;
 			}
-			yield return Comment("TODO: Call .cctor");
+			if (cctor != null)
+			{
+				yield return Comment("Begin .cctor");
+				var cctorLines = cctor.Body.ToArray();
+				foreach (var line in cctorLines.Take(cctorLines.Length - 1))
+				{
+					yield return line;
+				}
+				yield return Comment("End .cctor");
+			}
 			yield return Comment("End injected entry point code.");
 		}
     }

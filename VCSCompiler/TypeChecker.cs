@@ -9,7 +9,7 @@ namespace VCSCompiler
 {
     internal static class TypeChecker
     {
-		public static bool IsValidType(TypeDefinition type, IDictionary<string, ProcessedType> types, out string error)
+		public static bool IsValidType(TypeDefinition type, IDictionary<string, ProcessedType> types, MethodDefinition entryPoint, out string error)
 		{
 			error = string.Empty;
 
@@ -37,7 +37,7 @@ namespace VCSCompiler
 
 			foreach (var method in type.CompilableMethods())
 			{
-				if (!IsValidMethod(method, types, out var methodError))
+				if (!IsValidMethod(method, types, entryPoint, out var methodError))
 				{
 					error = $"{typeErrorHeader} has an invalid method: {methodError}";
 					return false;
@@ -66,7 +66,7 @@ namespace VCSCompiler
 			return true;
 		}
 
-		public static bool IsValidMethod(MethodDefinition method, IDictionary<string, ProcessedType> types, out string error)
+		public static bool IsValidMethod(MethodDefinition method, IDictionary<string, ProcessedType> types, MethodDefinition entryPoint, out string error)
 		{
 			error = string.Empty;
 
@@ -77,10 +77,13 @@ namespace VCSCompiler
 				return false;
 			}
 
-			// Static constructors are most likely being used for field initializers. Since when exactly memory is
-			// cleared is up to the user, we don't have a safe place to invoke it.
-			// So we block the feature altogether.
-			if (method.IsConstructor && method.IsStatic)
+
+			// Static constructors are most likely being used for field initializers.
+			// This is allowed solely for the Type containing the entry point of the program.
+			// The only reason we don't allow other types to have one is because that'll take more work
+			// to determine what order to invoke them in (for static constructors that reference the fields
+			// of other other types that are initialized in their own static constructors).
+			if (method.IsConstructor && method.IsStatic && method.DeclaringType != entryPoint.DeclaringType)
 			{
 				error = $"{methodErrorHeader} must not be a static constructor.";
 				return false;
