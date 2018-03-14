@@ -10,6 +10,7 @@ using System.Collections.Immutable;
 using VCSFramework;
 using Mono.Cecil.Cil;
 using VCSFramework.Assembly;
+using static VCSFramework.Assembly.AssemblyFactory;
 
 namespace VCSCompiler
 {
@@ -77,13 +78,14 @@ namespace VCSCompiler
 
 		private static CompiledAssembly CompileAssembly(Compiler compiler, AssemblyDefinition assemblyDefinition)
 		{
+			var cilEntryPoint = assemblyDefinition.MainModule.EntryPoint;
 			// Compilation steps (WIP):
 			// 1. Iterate over every type and collect basic information (Processsed*).
 			var types = assemblyDefinition.MainModule.Types
 				.Where(t => t.BaseType != null)
 				.Where(t => t.CustomAttributes.All(a => a.AttributeType.Name != "DoNotCompileAttribute"));
 			// TODO - Pass immutable copies of Types around instead of all mutating the field?
-			compiler.ProcessTypes(types);
+			compiler.ProcessTypes(types, cilEntryPoint);
 			// TODO - Do the above so we don't have to ToArray() to get around the fact we modify Types.
 			var compiledTypes = compiler.CompileTypes(compiler.Types.Values.Where(x => x.GetType() == typeof(ProcessedType))).ToArray();
 			foreach(var compiledType in compiledTypes.Select(t => (FullName: t.FullName, Type: t)))
@@ -152,7 +154,7 @@ namespace VCSCompiler
 		/// Gives the compiler a complete list of types to compile.
 		/// If a type relies on another type not in this list, this method will throw.
 		/// </summary>
-		private void ProcessTypes(IEnumerable<TypeDefinition> cecilTypes)
+		private void ProcessTypes(IEnumerable<TypeDefinition> cecilTypes, MethodDefinition entryPoint)
 		{
 			foreach (var type in cecilTypes)
 			{
@@ -160,12 +162,12 @@ namespace VCSCompiler
 				{
 					throw new FatalCompilationException(typeError);
 				}
-				var processedType = ProcessType(type);
+				var processedType = ProcessType(type, entryPoint);
 				Types[type.FullName] = processedType;
 			}
 		}
 
-		private ProcessedType ProcessType(TypeDefinition typeDefinition)
+		private ProcessedType ProcessType(TypeDefinition typeDefinition, MethodDefinition entryPoint)
 		{
 			var processedFields = typeDefinition.Fields.Select(ProcessField).ToArray();
 			var fieldOffsets = ProcessFieldOffsets(processedFields);
@@ -202,14 +204,15 @@ namespace VCSCompiler
 				var parameters = method.Parameters.Select(p => Types[p.ParameterType.FullName]).ToList();
 				var locals = method.Body.Variables.Select(l => Types[l.VariableType.FullName]).ToList();
 				var controlFlowGraph = ControlFlowGraphBuilder.Build(method);
-				
+
 				return new ProcessedSubroutine(
 					method,
 					controlFlowGraph,
 					Types[method.ReturnType.FullName], 
 					parameters,
 					locals,
-					method.CustomAttributes.Where(a => FrameworkAttributes.Any(fa => fa.FullName == a.AttributeType.FullName)).Select(CreateFrameworkAttribute).ToArray());
+					method.CustomAttributes.Where(a => FrameworkAttributes.Any(fa => fa.FullName == a.AttributeType.FullName)).Select(CreateFrameworkAttribute).ToArray(),
+					method == entryPoint);
 			}
 		}
 
@@ -263,11 +266,37 @@ namespace VCSCompiler
 				{
 					body = CilCompiler.CompileMethod(subroutine.MethodDefinition, Types.ToImmutableDictionary());
 				}
+
+				if (subroutine.IsEntryPoint)
+				{
+					Console.WriteLine("Injecting entry point code.");
+					body = GetEntryPointPrependedCode().Concat(body);
+				}
 				var compiledSubroutine = new CompiledSubroutine(subroutine, body);
 				compiledSubroutines.Add(compiledSubroutine);
 				Console.WriteLine($"{subroutine.FullName}, compilation finished");
 			}
 			return new CompiledType(processedType, compiledSubroutines);
+		}
+
+		private IEnumerable<AssemblyLine> GetEntryPointPrependedCode()
+		{
+			yield return Comment("Begin injected entry point code.");
+
+			// Clear processor flags, intialize stack pointer to 0xFF.
+			yield return SEI();
+			yield return CLD();
+			yield return LDX(0xFF);
+			yield return TXS();
+
+			// Initialize all memory to 0s (and skip RTS).
+			var clearMemoryLines = Memory.ClearMemoryInternal().ToArray();
+			foreach (var line in clearMemoryLines.Take(clearMemoryLines.Length - 1))
+			{
+				yield return line;
+			}
+			yield return Comment("TODO: Call .cctor");
+			yield return Comment("End injected entry point code.");
 		}
     }
 }

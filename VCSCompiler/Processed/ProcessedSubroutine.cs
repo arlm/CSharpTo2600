@@ -14,10 +14,11 @@ namespace VCSCompiler
 		public IList<ProcessedType> Locals { get; }
 		public IEnumerable<Attribute> FrameworkAttributes { get; }
 		public MethodDefinition MethodDefinition { get; }
+		public bool IsEntryPoint { get; }
 		public ControlFlowGraph ControlFlowGraph { get; }
 
 		protected ProcessedSubroutine(ProcessedSubroutine processedSubroutine)
-			: this(processedSubroutine.MethodDefinition, processedSubroutine.ControlFlowGraph, processedSubroutine.ReturnType, processedSubroutine.Parameters, processedSubroutine.Locals, processedSubroutine.FrameworkAttributes)
+			: this(processedSubroutine.MethodDefinition, processedSubroutine.ControlFlowGraph, processedSubroutine.ReturnType, processedSubroutine.Parameters, processedSubroutine.Locals, processedSubroutine.FrameworkAttributes, processedSubroutine.IsEntryPoint)
 		{ }
 
 		public ProcessedSubroutine(
@@ -26,7 +27,8 @@ namespace VCSCompiler
 			ProcessedType returnType, 
 			IList<ProcessedType> parameters, 
 			IList<ProcessedType> locals,
-			IEnumerable<Attribute> frameworkAttributes)
+			IEnumerable<Attribute> frameworkAttributes,
+			bool isEntryPoint)
 		{
 			MethodDefinition = methodDefinition;
 			ControlFlowGraph = controlFlowGraph;
@@ -34,6 +36,7 @@ namespace VCSCompiler
 			Parameters = parameters;
 			Locals = locals;
 			FrameworkAttributes = frameworkAttributes;
+			IsEntryPoint = isEntryPoint;
 		}
 
 		public bool TryGetFrameworkAttribute<T>(out T result) where T : Attribute
