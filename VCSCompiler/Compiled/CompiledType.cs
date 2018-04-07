@@ -7,11 +7,11 @@ using System.Collections.Immutable;
 
 namespace VCSCompiler
 {
-    internal sealed class CompiledType : ProcessedType
+    internal sealed class CompiledType : ProcessedType, ICompiledType
     {
 		public new IImmutableList<CompiledSubroutine> Subroutines => base.Subroutines.Cast<CompiledSubroutine>().ToImmutableList();
 
-		public CompiledType(ProcessedType processedType, IImmutableList<CompiledSubroutine> compiledSubroutines)
+		public CompiledType(IProcessedType processedType, IImmutableList<CompiledSubroutine> compiledSubroutines)
 			: base(processedType, compiledSubroutines)
 		{
 			if (compiledSubroutines.Count() != processedType.Subroutines.Count())

@@ -9,7 +9,7 @@ namespace VCSCompiler
 {
     internal static class TypeChecker
     {
-		public static bool IsValidType(TypeDefinition type, IDictionary<string, ProcessedType> types, out string error)
+		public static bool IsValidType(TypeDefinition type, IDictionary<string, IProcessedType> types, out string error)
 		{
 			error = string.Empty;
 
@@ -47,7 +47,7 @@ namespace VCSCompiler
 			return true;
 		}
 
-		public static bool IsValidField(FieldDefinition field, IDictionary<string, ProcessedType> types, out string error)
+		public static bool IsValidField(FieldDefinition field, IDictionary<string, IProcessedType> types, out string error)
 		{
 			error = string.Empty;
 
@@ -57,7 +57,7 @@ namespace VCSCompiler
 				return false;
 			}
 
-			if (!field.FieldType.IsValueType)
+			if (!field.FieldType.IsValueType && !field.FieldType.IsPointer)
 			{
 				error = $"Field '{field.FullName}' can not be a variable of a reference type.";
 				return false;
@@ -66,7 +66,7 @@ namespace VCSCompiler
 			return true;
 		}
 
-		public static bool IsValidMethod(MethodDefinition method, IDictionary<string, ProcessedType> types, out string error)
+		public static bool IsValidMethod(MethodDefinition method, IDictionary<string, IProcessedType> types, out string error)
 		{
 			error = string.Empty;
 
@@ -107,7 +107,7 @@ namespace VCSCompiler
 			return true;
 		}
 
-	    public static bool IsValidParameter(ParameterDefinition parameter, IDictionary<string, ProcessedType> types, out string error)
+	    public static bool IsValidParameter(ParameterDefinition parameter, IDictionary<string, IProcessedType> types, out string error)
 	    {
 			error = string.Empty;
 
@@ -128,7 +128,7 @@ namespace VCSCompiler
 			return true;
 		}
 
-	    public static bool IsValidLocal(VariableReference local, IDictionary<string, ProcessedType> types, out string error)
+	    public static bool IsValidLocal(VariableReference local, IDictionary<string, IProcessedType> types, out string error)
 	    {
 			error = string.Empty;
 

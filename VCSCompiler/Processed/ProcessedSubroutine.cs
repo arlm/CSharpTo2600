@@ -9,9 +9,9 @@ namespace VCSCompiler
 	{
 		public string Name => MethodDefinition.Name;
 		public string FullName => MethodDefinition.FullName;
-		public ProcessedType ReturnType { get; }
-		public IList<ProcessedType> Parameters { get; }
-		public IList<ProcessedType> Locals { get; }
+		public IProcessedType ReturnType { get; }
+		public IList<IProcessedType> Parameters { get; }
+		public IList<IProcessedType> Locals { get; }
 		public IEnumerable<Attribute> FrameworkAttributes { get; }
 		public MethodDefinition MethodDefinition { get; }
 		public bool IsEntryPoint { get; }
@@ -25,9 +25,9 @@ namespace VCSCompiler
 			MethodDefinition methodDefinition,
 			ControlFlowGraph controlFlowGraph,
 			bool isEntryPoint,
-			ProcessedType returnType, 
-			IList<ProcessedType> parameters, 
-			IList<ProcessedType> locals,
+			IProcessedType returnType, 
+			IList<IProcessedType> parameters, 
+			IList<IProcessedType> locals,
 			IEnumerable<Attribute> frameworkAttributes)
 		{
 			MethodDefinition = methodDefinition;

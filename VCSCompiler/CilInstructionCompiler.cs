@@ -18,11 +18,11 @@ namespace VCSCompiler
     internal class CilInstructionCompiler
     {
 		private readonly IImmutableDictionary<Code, Func<Instruction, IEnumerable<AssemblyLine>>> MethodMap;
-		private readonly IImmutableDictionary<string, ProcessedType> Types;
+		private readonly IImmutableDictionary<string, IProcessedType> Types;
 	    private readonly MethodDefinition MethodDefinition;
 	    private int CgtCount;
 
-		public CilInstructionCompiler(MethodDefinition methodDefinition, IImmutableDictionary<string, ProcessedType> types)
+		public CilInstructionCompiler(MethodDefinition methodDefinition, IImmutableDictionary<string, IProcessedType> types)
 		{
 			MethodMap = CreateMethodMap();
 			MethodDefinition = methodDefinition;
@@ -514,7 +514,7 @@ namespace VCSCompiler
 
 		private IEnumerable<AssemblyLine> Unsupported(Instruction instruction) => throw new UnsupportedOpCodeException(instruction.OpCode);
 
-		private (ProcessedType ContainingType, ProcessedField ProcessedField) GetProcessedInfo(FieldDefinition fieldDefinition)
+		private (IProcessedType ContainingType, ProcessedField ProcessedField) GetProcessedInfo(FieldDefinition fieldDefinition)
 		{
 			var containingType = fieldDefinition.DeclaringType;
 			var processedType = Types[containingType.FullName];

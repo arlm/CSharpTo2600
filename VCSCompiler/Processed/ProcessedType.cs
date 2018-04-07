@@ -7,16 +7,16 @@ using System.Collections.Immutable;
 
 namespace VCSCompiler
 {
-    internal class ProcessedType
+    internal class ProcessedType : IProcessedType
     {
 		public string Name => TypeDefinition.Name;
 		public string FullName => TypeDefinition.FullName;
-		public ProcessedType BaseType { get; }
+		public IProcessedType BaseType { get; }
 		public IEnumerable<ProcessedField> Fields { get; }
 		/// <summary>
 		/// Instance field byte offsets.
 		/// </summary>
-		public IImmutableDictionary<ProcessedField, byte> FieldOffsets;
+		public IImmutableDictionary<ProcessedField, byte> FieldOffsets { get; }
 		public IImmutableList<ProcessedSubroutine> Subroutines { get; }
 		/// <summary>
 		/// Total size in bytes of an instance of this type.
@@ -33,13 +33,13 @@ namespace VCSCompiler
 		public bool AllowedAsLValue { get; }
 		public bool SystemType => TypeDefinition.Namespace.StartsWith("System");
 
-		protected ProcessedType(ProcessedType processedType, IImmutableList<CompiledSubroutine> compiledSubroutines)
+		protected ProcessedType(IProcessedType processedType, IImmutableList<CompiledSubroutine> compiledSubroutines)
 			: this(processedType.TypeDefinition, processedType.BaseType, processedType.Fields, processedType.FieldOffsets, compiledSubroutines.Cast<ProcessedSubroutine>().ToImmutableList(), processedType.ThisSize, processedType.AllowedAsLValue)
 		{ }
 
 		public ProcessedType(
 			TypeDefinition typeDefinition, 
-			ProcessedType baseType,
+			IProcessedType baseType,
 			IEnumerable<ProcessedField> fields,
 			IImmutableDictionary<ProcessedField, byte> fieldOffsets,
 			IImmutableList<ProcessedSubroutine> subroutines, 
@@ -55,7 +55,7 @@ namespace VCSCompiler
 			ThisSize = size ?? Fields.Sum(pf => pf.FieldType.TotalSize);
 		}
 
-		public ProcessedType ReplaceSubroutine(ProcessedSubroutine oldSubroutine, CompiledSubroutine newSubroutine)
+		public IProcessedType ReplaceSubroutine(ProcessedSubroutine oldSubroutine, CompiledSubroutine newSubroutine)
 		{
 			var finalSubroutines = new List<ProcessedSubroutine>(Subroutines);
 			var oldSubroutineToRemove = finalSubroutines.Single(s => s.MethodDefinition == oldSubroutine.MethodDefinition);

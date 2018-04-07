@@ -9,10 +9,10 @@ namespace VCSCompiler
     {
 		public string Name => FieldDefinition.Name;
 		public string FullName => FieldDefinition.FullName;
-		public ProcessedType FieldType { get; }
+		public IProcessedType FieldType { get; }
 		public FieldDefinition FieldDefinition { get; }
 
-		public ProcessedField(FieldDefinition fieldDefinition, ProcessedType fieldType)
+		public ProcessedField(FieldDefinition fieldDefinition, IProcessedType fieldType)
 		{
 			FieldDefinition = fieldDefinition;
 			FieldType = fieldType;

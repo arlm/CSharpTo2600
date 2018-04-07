@@ -16,14 +16,14 @@ namespace VCSCompiler
 {
     public sealed class Compiler
     {
-		private readonly IDictionary<string, ProcessedType> Types;
+		private readonly IDictionary<string, IProcessedType> Types;
 		private readonly Assembly FrameworkAssembly;
 		private readonly AssemblyDefinition UserAssemblyDefinition;
 		private readonly IEnumerable<Type> FrameworkAttributes;
 
 		private Compiler(Assembly frameworkAssembly, AssemblyDefinition userAssemblyDefinition, IEnumerable<Type> frameworkAttributes)
 		{
-			Types = new Dictionary<string, ProcessedType>();
+			Types = new Dictionary<string, IProcessedType>();
 			FrameworkAssembly = frameworkAssembly;
 			UserAssemblyDefinition = userAssemblyDefinition;
 			FrameworkAttributes = frameworkAttributes;
@@ -128,6 +128,7 @@ namespace VCSCompiler
 		private void AddPredefinedTypes()
 		{
 			var system = AssemblyDefinition.ReadAssembly(typeof(object).GetTypeInfo().Assembly.Location);
+			var sys = AssemblyDefinition.ReadAssembly(typeof(byte*).GetTypeInfo().Assembly.Location);
 			var supportedTypes = new[] { "Object", "ValueType", "Void", "Byte", "Boolean" };
 			var types = system.Modules[0].Types.Where(td => supportedTypes.Contains(td.Name)).ToImmutableArray();
 
@@ -150,6 +151,9 @@ namespace VCSCompiler
 			var boolType = types.Single(x => x.Name == "Boolean");
 			var boolCompiled = new CompiledType(new ProcessedType(boolType, valueTypeCompiled, Enumerable.Empty<ProcessedField>(), ImmutableDictionary<ProcessedField, byte>.Empty, ImmutableList<ProcessedSubroutine>.Empty, 1), ImmutableList<CompiledSubroutine>.Empty);
 			Types[boolType.FullName] = boolCompiled;
+
+			var bytePointerCompiled = new PointerCompiledType(byteCompiled, objectCompiled);
+			Types[bytePointerCompiled.FullName] = bytePointerCompiled;
 		}
 
 		/// <summary>
@@ -226,7 +230,7 @@ namespace VCSCompiler
 			return instance;
 		}
 
-		private IEnumerable<CompiledType> CompileTypes(IEnumerable<ProcessedType> processedTypes)
+		private IEnumerable<CompiledType> CompileTypes(IEnumerable<IProcessedType> processedTypes)
 		{
 			// ToArray because we're going to be modifying the underlying Types dictionary.
 			foreach(var type in processedTypes.ToArray())
@@ -235,7 +239,7 @@ namespace VCSCompiler
 			}
 		}
 
-		private CompiledType CompileType(ProcessedType processedType)
+		private CompiledType CompileType(IProcessedType processedType)
 		{
 			var compiledSubroutines = new List<CompiledSubroutine>();
 			var callGraph = CreateCallGraph(processedType);
@@ -286,7 +290,7 @@ namespace VCSCompiler
 			return new CompiledType(processedType, compiledSubroutines.ToImmutableList());
 		}
 
-		private ImmutableGraph<ProcessedSubroutine> CreateCallGraph(ProcessedType processedType)
+		private ImmutableGraph<ProcessedSubroutine> CreateCallGraph(IProcessedType processedType)
 		{
 			var graph = ImmutableGraph<ProcessedSubroutine>.Empty;
 

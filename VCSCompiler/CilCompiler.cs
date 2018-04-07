@@ -13,7 +13,7 @@ namespace VCSCompiler
 {
     internal class CilCompiler
     {
-		public static IEnumerable<AssemblyLine> CompileMethod(MethodDefinition definition, IImmutableDictionary<string, ProcessedType> types, Assembly frameworkAssembly)
+		public static IEnumerable<AssemblyLine> CompileMethod(MethodDefinition definition, IImmutableDictionary<string, IProcessedType> types, Assembly frameworkAssembly)
 		{
 			var instructionCompiler = new CilInstructionCompiler(definition, types);
 			var instructions = definition.Body.Instructions;
@@ -36,7 +36,7 @@ namespace VCSCompiler
 			return compiledBody;
 		}
 
-		private static IEnumerable<ICompilationAction> ProcessInstructions(IEnumerable<Instruction> instructions, IImmutableDictionary<string, ProcessedType> types, Assembly frameworkAssembly)
+		private static IEnumerable<ICompilationAction> ProcessInstructions(IEnumerable<Instruction> instructions, IImmutableDictionary<string, IProcessedType> types, Assembly frameworkAssembly)
 		{
 			var actions = new List<ICompilationAction>();
 
@@ -74,7 +74,7 @@ namespace VCSCompiler
 			}
 		}
 
-		private static ICompilationAction CreateExecuteCommand(Instruction instruction, IImmutableDictionary<string, ProcessedType> types, Assembly frameworkAssembly)
+		private static ICompilationAction CreateExecuteCommand(Instruction instruction, IImmutableDictionary<string, IProcessedType> types, Assembly frameworkAssembly)
 		{
 			var nextInstruction = instruction.Next;
 			var methodDefinition = (MethodReference)instruction.Operand;
