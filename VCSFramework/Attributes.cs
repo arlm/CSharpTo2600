@@ -101,6 +101,22 @@ namespace VCSFramework
 	}
 
 	/// <summary>
+	/// Embeds byte data into the ROM and provides a pointer to access it.
+	/// This attribute can only be applied to fields of type byte*.
+	/// </summary>
+	[DoNotCompile]
+	[AttributeUsage(AttributeTargets.Field)]
+	public sealed class RomDataAttribute : Attribute
+	{
+		public byte[] Data { get; }
+
+		public RomDataAttribute(params byte[] data)
+		{
+			Data = data;
+		}
+	}
+
+	/// <summary>
 	/// Instructs compiler to replace this method's body with that of another method.
 	/// </summary>
 	[DoNotCompile]
