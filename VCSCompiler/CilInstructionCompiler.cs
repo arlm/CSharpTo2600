@@ -397,19 +397,17 @@ namespace VCSCompiler
 			var fieldDefinition = (FieldDefinition)instruction.Operand;
 
 			var (containingType, processedField) = GetProcessedInfo(fieldDefinition);
-			if (processedField.FieldType.TotalSize != 1)
-			{
-				throw new FatalCompilationException($"Only single-byte loads are currently supported, can not load '{processedField.FieldType.Name}' ({processedField.FieldType.TotalSize} bytes)");
-			}
 
 			// Put address of instance in X.
 			yield return PLA();
 			yield return TAX();
 
-			var byteOffset = containingType.FieldOffsets[processedField];
-
-			yield return LDA(byteOffset, Index.X);
-			yield return PHA();
+			for (var i = 0; i < processedField.FieldType.TotalSize; i++)
+			{
+				var byteOffset = (byte)(containingType.FieldOffsets[processedField] + i);
+				yield return LDA(byteOffset, Index.X);
+				yield return PHA();
+			}
 		}
 
 		private IEnumerable<AssemblyLine> Ldflda(Instruction instruction)
@@ -433,13 +431,19 @@ namespace VCSCompiler
 			var fieldDefinition = (FieldDefinition)instruction.Operand;
 
 			var (_, processedField) = GetProcessedInfo(fieldDefinition);
-			if (processedField.FieldType.TotalSize != 1)
-			{
-				throw new FatalCompilationException($"Only single-byte loads are currently supported, can not load '{processedField.FieldType.Name}' ({processedField.FieldType.TotalSize} bytes)");
-			}
 
-			yield return LDA(LabelGenerator.GetFromField(fieldDefinition));
-			yield return PHA();
+			if (processedField.FieldType.TotalSize == 1)
+			{
+				yield return LDA(LabelGenerator.GetFromField(fieldDefinition));
+				yield return PHA();
+				yield break;
+			}
+			
+			for (var i = 0; i < processedField.FieldType.TotalSize; i++)
+			{
+				yield return LDA(LabelGenerator.GetFromField(fieldDefinition), i);
+				yield return PHA();
+			}
 		}
 
 		private IEnumerable<AssemblyLine> Ldsflda(Instruction instruction)
@@ -469,37 +473,62 @@ namespace VCSCompiler
 			var fieldDefinition = (FieldDefinition)instruction.Operand;
 
 			var (containingType, processedField) = GetProcessedInfo(fieldDefinition);
-			if (processedField.FieldType.TotalSize != 1)
-			{
-				throw new FatalCompilationException($"Only single-byte stores are currently supported, can not store to '{processedField.FieldType.Name}' ({processedField.FieldType.TotalSize} bytes)");
-			}
 
 			var byteOffset = containingType.FieldOffsets[processedField];
+			var fieldSize = processedField.FieldType.TotalSize;
 
-			// Put value to store in X.
-			yield return PLA();
-			yield return TAX();
+			if (fieldSize == 1)
+			{
+				// Put value to store in X.
+				yield return PLA();
+				yield return TAX();
 
-			// Put address of containing object in Y.
-			yield return PLA();
-			yield return TAY();
+				// Put address of containing object in Y.
+				yield return PLA();
+				yield return TAY();
+				
+				yield return STX(byteOffset, Index.Y);
+			}
+			else
+			{
+				// Unfortunately the value comes before the target address, and there isn't any stack-relative addressing on the 6502.
+				// So we'll have to get to the address with some stack pointer arithmetic.
+				yield return TSX();
+				// Offsets are purely additive, so we'll use unchecked to give us a byte that, when added, wraps around to what we want.
+				// The stack pointer points to the location where the next byte will be pushed, so we need to subtract 1 to get to the value.
+				// Then we just subtract the size of the value to get to the address.
+				byte offsetToAddress = unchecked((byte)-(fieldSize + 1));
+				yield return LDY(offsetToAddress, Index.X);
+				// TODO - Depending on size of value might be more time-efficient to just use absolute addressing with the Y register?
+				yield return TYA();
+				yield return TAX();
 
-			yield return STX(byteOffset, Index.Y);
+				for (var offset = fieldSize - 1; offset >= 0; offset--)
+				{
+					yield return PLA();
+					yield return STA((byte)offset, Index.X);
+				}
+			}
 		}
 
 		private IEnumerable<AssemblyLine> Stsfld(Instruction instruction)
 		{
-			yield return PLA();
-
 			var fieldDefinition = (FieldDefinition)instruction.Operand;
 
 			var (_, processedField) = GetProcessedInfo(fieldDefinition);
-			if (processedField.FieldType.TotalSize != 1)
-			{
-				throw new FatalCompilationException($"Only single-byte stores are currently supported, can not store to '{processedField.FieldType.Name}' ({processedField.FieldType.TotalSize} bytes)");
-			}
 
-			yield return STA(LabelGenerator.GetFromField(fieldDefinition));
+			if (processedField.FieldType.TotalSize == 1)
+			{
+				yield return PLA();
+				yield return STA(LabelGenerator.GetFromField(fieldDefinition));
+				yield break;
+			}
+			
+			for (var i = processedField.FieldType.TotalSize - 1; i >= 0; i--)
+			{
+				yield return PLA();
+				yield return STA(LabelGenerator.GetFromField(fieldDefinition), i);
+			}
 		}
 
 	    private IEnumerable<AssemblyLine> Sub(Instruction instruction)

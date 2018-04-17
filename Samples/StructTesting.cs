@@ -26,11 +26,17 @@ namespace Samples
 	static class StructTesting
     {
 		private static SingleByteStruct SingleByteStruct;
-		private static MultiByteStruct MultiByteStruct1;
-		private static MultiByteStruct MultiByteStruct2;
-		private static CompositeStruct CompositeStruct;
+		private static MultiByteStruct MultiByteStructA;
+		private static MultiByteStruct MultiByteStructB;
+		private static CompositeStruct CompositeStructA;
+		private static CompositeStruct CompositeStructB;
 
 		public static void Main()
+		{
+			CompositeStructB.MultiByteStruct1 = CompositeStructB.MultiByteStruct2;
+		}
+
+		/*public static void Main()
 		{
 			SingleByteStruct.Value = 24;
 
@@ -46,6 +52,6 @@ namespace Samples
 
 			// This will cause an error due to multi-byte loads/stores.
 			// MultiByteStruct1 = MultiByteStruct2;
-		}
+		}*/
     }
 }
