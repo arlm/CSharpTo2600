@@ -13,14 +13,18 @@ namespace VCSCompiler
 {
     internal class CilCompiler
     {
-		public static IEnumerable<AssemblyLine> CompileMethod(MethodDefinition definition, IImmutableDictionary<string, ProcessedType> types, Assembly frameworkAssembly)
+		public static IEnumerable<AssemblyLine> CompileMethod(MethodDefinition definition, ControlFlowGraph controlFlowGraph, IImmutableDictionary<string, ProcessedType> types, Assembly frameworkAssembly)
 		{
 			var instructionCompiler = new CilInstructionCompiler(definition, types);
 			var instructions = definition.Body.Instructions;
-			var compilationActions = ProcessInstructions(instructions, types, frameworkAssembly);
+			var compilationActions = ProcessInstructions(instructions, types, frameworkAssembly).ToArray();
 			var instructionsToLabel = GetInstructionsToEmitLabelsFor(instructions).ToArray();
 			var compiledBody = new List<AssemblyLine>();
-			var compilationContext = new CompilationContext(instructionCompiler);
+			var evaluationStacks = new Dictionary<BasicBlock, Stack<CompiledType>>();
+			foreach (var block in controlFlowGraph.Graph.TopologicalSort())
+			{
+				evaluationStacks[block] = new Stack<CompiledType>();
+			}
 			foreach (var action in compilationActions)
 			{
 				var needLabel = action.ConsumedInstructions.Where(i => instructionsToLabel.Contains(i)).ToArray();
@@ -29,6 +33,12 @@ namespace VCSCompiler
 					compiledBody.Add(AssemblyFactory.Label(LabelGenerator.GetFromInstruction(toLabel)));
 				}
 
+				Stack<CompiledType> evaluationStack = null;
+				if (action is CompileCompilationAction)
+				{
+					evaluationStack = evaluationStacks[controlFlowGraph.BlockContainingInstruction(action.ConsumedInstructions.Single())];
+				}
+				var compilationContext = new CompilationContext(instructionCompiler, evaluationStack);
 				compiledBody.AddRange(action.Execute(compilationContext));
 			}
 

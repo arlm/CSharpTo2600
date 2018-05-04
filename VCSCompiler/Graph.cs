@@ -11,10 +11,10 @@ namespace VCSCompiler
 	/// </summary>
 	internal class ImmutableGraph<T> where T: class
 	{
-		private readonly IImmutableSet<T> Nodes;
 		private readonly IImmutableDictionary<T, IImmutableSet<T>> Edges;
 
 		public static ImmutableGraph<T> Empty { get; } = new ImmutableGraph<T>(ImmutableHashSet<T>.Empty, ImmutableDictionary<T, IImmutableSet<T>>.Empty);
+		public IImmutableSet<T> Nodes { get; }
 
 		private ImmutableGraph(IImmutableSet<T> nodes, IImmutableDictionary<T, IImmutableSet<T>> edges)
 		{
