@@ -20,11 +20,13 @@ namespace VCSCompiler
 			var compilationActions = ProcessInstructions(instructions, types, frameworkAssembly).ToArray();
 			var instructionsToLabel = GetInstructionsToEmitLabelsFor(instructions).ToArray();
 			var compiledBody = new List<AssemblyLine>();
-			var evaluationStacks = new Dictionary<BasicBlock, Stack<CompiledType>>();
+			var evaluationStacks = new Dictionary<BasicBlock, Stack<ProcessedType>>();
 			foreach (var block in controlFlowGraph.Graph.Nodes)
 			{
-				evaluationStacks[block] = new Stack<CompiledType>();
+				evaluationStacks[block] = new Stack<ProcessedType>();
 			}
+
+			BasicBlock previousBasicBlock = null;
 			foreach (var action in compilationActions)
 			{
 				var needLabel = action.ConsumedInstructions.Where(i => instructionsToLabel.Contains(i)).ToArray();
@@ -33,10 +35,40 @@ namespace VCSCompiler
 					compiledBody.Add(AssemblyFactory.Label(LabelGenerator.GetFromInstruction(toLabel)));
 				}
 
-				Stack<CompiledType> evaluationStack = null;
+				Stack<ProcessedType> evaluationStack = null;
 				if (action is CompileCompilationAction)
 				{
-					evaluationStack = evaluationStacks[controlFlowGraph.BlockContainingInstruction(action.ConsumedInstructions.Single())];
+					// TODO - Move deep nesting elsewhere.
+					var basicBlock = controlFlowGraph.BlockContainingInstruction(action.ConsumedInstructions.Single());
+					evaluationStack = evaluationStacks[basicBlock];
+					if (basicBlock != previousBasicBlock)
+					{
+						Console.WriteLine($"Picked evaluation stack for block: {basicBlock}");
+						if (previousBasicBlock != null)
+						{
+							var previousEvaluationStack = evaluationStacks[previousBasicBlock];
+							// If we're moving onto a new basic block and the previous one still has values in its evaluation stack,
+							// then chances are the next attempt to pop() is going to throw.
+							// For the specific case of a basic block that has only one edge going to it (from the previous basic block),
+							// we will transfer the remaining values in its evaluation stack to the current one.
+							if (previousEvaluationStack?.Count > 0)
+							{
+								Console.WriteLine($" Previous evaluation stack still has {previousEvaluationStack.Count} type[s] in it!");
+								var neighborsTo = controlFlowGraph.Graph.GetNeighborsTo(basicBlock);
+								Console.WriteLine($" {neighborsTo.Count()} blocks have an edge to the new basic block");
+								if (neighborsTo.Count() == 1)
+								{
+									Console.WriteLine(" Pushing previous evaluation stack's remaining values onto the current evaluation stack");
+									foreach (var value in previousEvaluationStack.Reverse())
+									{
+										evaluationStack.Push(value);
+									}
+									previousEvaluationStack.Clear();
+								}
+							}
+						}
+					}
+					previousBasicBlock = basicBlock;
 				}
 				var compilationContext = new CompilationContext(instructionCompiler, evaluationStack);
 				compiledBody.AddRange(action.Execute(compilationContext));

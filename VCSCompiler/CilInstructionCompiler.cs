@@ -64,35 +64,36 @@ namespace VCSCompiler
 			return dictionary.ToImmutableDictionary();
 		}
 
-	    private IEnumerable<AssemblyLine> LoadArgument(Instruction instruction)
+	    private IEnumerable<AssemblyLine> LoadArgument(Instruction instruction, ICompilationContext context)
 	    {
 		    if (instruction.Operand != null)
 		    {
-			    return LoadArgument(((ParameterReference) instruction.Operand).Index);
+			    return LoadArgument(((ParameterReference) instruction.Operand).Index, context);
 		    }
 		    switch (instruction.OpCode.Code)
 		    {
 				case Code.Ldarg_0:
-					return LoadArgument(0);
+					return LoadArgument(0, context);
 				case Code.Ldarg_1:
-					return LoadArgument(1);
+					return LoadArgument(1, context);
 				case Code.Ldarg_2:
-					return LoadArgument(2);
+					return LoadArgument(2, context);
 				case Code.Ldarg_3:
-					return LoadArgument(3);
+					return LoadArgument(3, context);
 				default:
 					throw new NotImplementedException();
 		    }
 	    }
 
-	    private IEnumerable<AssemblyLine> LoadArgument(int index)
+	    private IEnumerable<AssemblyLine> LoadArgument(int index, ICompilationContext context)
 	    {
 		    var parameter = MethodDefinition.Parameters[index];
 		    yield return LDA(LabelGenerator.GetFromParameter(parameter));
 		    yield return PHA();
+			context.EvaluationStack.Push(Types[parameter.ParameterType.FullName]);
 	    }
 
-		private IEnumerable<AssemblyLine> LoadConstant(Instruction instruction)
+		private IEnumerable<AssemblyLine> LoadConstant(Instruction instruction, ICompilationContext context)
 		{
 			byte value = 0;
 			if (instruction.Operand != null)
@@ -111,98 +112,102 @@ namespace VCSCompiler
 				switch(instruction.OpCode.Code)
 				{
 					case Code.Ldc_I4_0:
-						return LoadConstant(0);
+						return LoadConstant(0, context);
 					case Code.Ldc_I4_1:
-						return LoadConstant(1);
+						return LoadConstant(1, context);
 					case Code.Ldc_I4_2:
-						return LoadConstant(2);
+						return LoadConstant(2, context);
 					case Code.Ldc_I4_3:
-						return LoadConstant(3);
+						return LoadConstant(3, context);
 					case Code.Ldc_I4_4:
-						return LoadConstant(4);
+						return LoadConstant(4, context);
 					case Code.Ldc_I4_5:
-						return LoadConstant(5);
+						return LoadConstant(5, context);
 					case Code.Ldc_I4_6:
-						return LoadConstant(6);
+						return LoadConstant(6, context);
 					case Code.Ldc_I4_7:
-						return LoadConstant(7);
+						return LoadConstant(7, context);
 					case Code.Ldc_I4_8:
-						return LoadConstant(8);
+						return LoadConstant(8, context);
 				}
 			}
-			return LoadConstant(value);
+			return LoadConstant(value, context);
 		}
 
-		private IEnumerable<AssemblyLine> LoadConstant(byte value)
+		private IEnumerable<AssemblyLine> LoadConstant(byte value, ICompilationContext context)
 		{
 			yield return LDA(value);
 			yield return PHA();
+			context.EvaluationStack.Push(Types[typeof(byte).FullName]);
 		}
 
-	    private IEnumerable<AssemblyLine> LoadLocal(Instruction instruction)
+	    private IEnumerable<AssemblyLine> LoadLocal(Instruction instruction, ICompilationContext context)
 	    {
 		    if (instruction.Operand != null)
 		    {
-			    return LoadLocal(((VariableReference) instruction.Operand).Index);
+			    return LoadLocal(((VariableReference) instruction.Operand).Index, context);
 		    }
 		    else
 		    {
 			    switch (instruction.OpCode.Code)
 			    {
 					case Code.Ldloc_0:
-						return LoadLocal(0);
+						return LoadLocal(0, context);
 					case Code.Ldloc_1:
-						return LoadLocal(1);
+						return LoadLocal(1, context);
 					case Code.Ldloc_2:
-						return LoadLocal(2);
+						return LoadLocal(2, context);
 					case Code.Ldloc_3:
-						return LoadLocal(3);
+						return LoadLocal(3, context);
 					default:
 						throw new NotImplementedException();
 			    }
 		    }
 	    }
 
-	    private IEnumerable<AssemblyLine> LoadLocal(int index)
+	    private IEnumerable<AssemblyLine> LoadLocal(int index, ICompilationContext context)
 	    {
 		    var local = MethodDefinition.Body.Variables[index];
 		    yield return LDA(LabelGenerator.GetFromVariable(MethodDefinition, local));
 		    yield return PHA();
+			context.EvaluationStack.Push(Types[local.VariableType.FullName]);
 	    }
 
-	    private IEnumerable<AssemblyLine> StoreArgument(Instruction instruction)
+	    private IEnumerable<AssemblyLine> StoreArgument(Instruction instruction, ICompilationContext context)
 	    {
 		    // Either Starg or Starg_S.
 		    var parameter = (ParameterDefinition)instruction.Operand;
 			yield return PLA();
+			context.EvaluationStack.Pop();
 		    yield return STA(LabelGenerator.GetFromParameter(parameter));
 		}
 
-	    private IEnumerable<AssemblyLine> StoreLocal(Instruction instruction)
+	    private IEnumerable<AssemblyLine> StoreLocal(Instruction instruction, ICompilationContext context)
 	    {
 		    if (instruction.Operand != null)
 		    {
-			    return StoreLocal(((VariableReference) instruction.Operand).Index);
+			    return StoreLocal(((VariableReference) instruction.Operand).Index, context);
 		    }
 		    switch (instruction.OpCode.Code)
 		    {
 				case Code.Stloc_0:
-					return StoreLocal(0);
+					return StoreLocal(0, context);
 				case Code.Stloc_1:
-					return StoreLocal(1);
+					return StoreLocal(1, context);
 				case Code.Stloc_2:
-					return StoreLocal(2);
+					return StoreLocal(2, context);
 				case Code.Stloc_3:
-					return StoreLocal(3);
+					return StoreLocal(3, context);
 				default:
 					throw new NotImplementedException();
 		    }
 	    }
 
-	    private IEnumerable<AssemblyLine> StoreLocal(int index)
+	    private IEnumerable<AssemblyLine> StoreLocal(int index, ICompilationContext context)
 	    {
 		    var local = MethodDefinition.Body.Variables[index];
 		    yield return PLA();
+			context.EvaluationStack.Pop();
 		    yield return STA(LabelGenerator.GetFromVariable(MethodDefinition, local));
 	    }
 
@@ -210,11 +215,14 @@ namespace VCSCompiler
 		{
 			// TODO - Should probably just allocate a couple address locations instead of trying to use the stack operations.
 			yield return PLA();
+			context.EvaluationStack.Pop();
 			yield return STA(LabelGenerator.TemporaryRegister1);
 			yield return PLA();
+			context.EvaluationStack.Pop();
 			yield return CLC();
 			yield return ADC(LabelGenerator.TemporaryRegister1);
 			yield return PHA();
+			context.EvaluationStack.Push(Types[typeof(byte).FullName]);
 		}
 
 	    private IEnumerable<AssemblyLine> Br(Instruction instruction, ICompilationContext context)
@@ -227,6 +235,7 @@ namespace VCSCompiler
 	    private IEnumerable<AssemblyLine> Brtrue(Instruction instruction, ICompilationContext context)
 	    {
 			yield return PLA();
+			context.EvaluationStack.Pop();
 		    yield return BNE(LabelGenerator.GetFromInstruction((Instruction)instruction.Operand));
 		}
 
@@ -252,6 +261,7 @@ namespace VCSCompiler
 						throw new NotImplementedException($"{method.Name}, marked with {nameof(OverrideWithStoreToSymbolAttribute)}, must take 1 parameter for now.");
 					}
 					yield return PLA();
+					context.EvaluationStack.Pop();
 				}
 				yield return STA(overrideStore.Symbol);
 				yield break;
@@ -265,6 +275,7 @@ namespace VCSCompiler
 					throw new NotImplementedException($"{method.Name}, marked with {nameof(OverrideWithLoadToRegisterAttribute)} must take 1 parameter.");
 				}
 				yield return PLA();
+				context.EvaluationStack.Pop();
 				switch (overrideRegisterLoad.Register)
 				{
 					case "A":
@@ -289,6 +300,7 @@ namespace VCSCompiler
 				}
 				yield return LDA(overrideLoad.Symbol);
 				yield return PHA();
+				context.EvaluationStack.Push(Types[method.ReturnType.FullName]);
 				yield break;
 			}
 
@@ -299,6 +311,7 @@ namespace VCSCompiler
 				foreach (var parameter in parameters.Reverse())
 				{
 					yield return PLA();
+					context.EvaluationStack.Pop();
 					yield return STA(LabelGenerator.GetFromParameter(parameter));
 				}
 			}
@@ -335,8 +348,10 @@ namespace VCSCompiler
 		    var falseLabel = Label($"__CGT_UN_FALSE_{CgtCount}");
 		    CgtCount++;
 			yield return PLA();
+			context.EvaluationStack.Pop();
 		    yield return STA(LabelGenerator.TemporaryRegister1);
 		    yield return PLA();
+			context.EvaluationStack.Pop();
 		    yield return CMP(LabelGenerator.TemporaryRegister1);
 		    yield return BEQ(falseLabel.Name);
 		    yield return BCS(trueLabel.Name);
@@ -351,6 +366,7 @@ namespace VCSCompiler
 
 		    yield return endLabel;
 			yield return PHA();
+			context.EvaluationStack.Push(Types[typeof(byte).FullName]);
 	    }
 
 		/// <summary>
@@ -364,6 +380,7 @@ namespace VCSCompiler
 			var processedType = Types[typeDefinition.FullName];
 
 			yield return PLA();
+			context.EvaluationStack.Pop();
 			yield return TAX();
 
 			yield return LDA(0);
@@ -373,19 +390,19 @@ namespace VCSCompiler
 			}
 		}
 
-	    private IEnumerable<AssemblyLine> Ldarg(Instruction instruction, ICompilationContext context) => LoadArgument(instruction);
+	    private IEnumerable<AssemblyLine> Ldarg(Instruction instruction, ICompilationContext context) => LoadArgument(instruction, context);
 
-	    private IEnumerable<AssemblyLine> Ldarg_S(Instruction instruction, ICompilationContext context) => LoadArgument(instruction);
+	    private IEnumerable<AssemblyLine> Ldarg_S(Instruction instruction, ICompilationContext context) => LoadArgument(instruction, context);
 
-	    private IEnumerable<AssemblyLine> Ldloc(Instruction instruction, ICompilationContext context) => LoadLocal(instruction);
+	    private IEnumerable<AssemblyLine> Ldloc(Instruction instruction, ICompilationContext context) => LoadLocal(instruction, context);
 
-	    private IEnumerable<AssemblyLine> Ldloc_S(Instruction instruction, ICompilationContext context) => LoadLocal(instruction);
+	    private IEnumerable<AssemblyLine> Ldloc_S(Instruction instruction, ICompilationContext context) => LoadLocal(instruction, context);
 
 		/// <summary>
 		/// Pushes a constant uint8 onto the stack.
 		/// </summary>
 		/// <remarks>The spec says to push an int32, but that's impractical.</remarks>
-		private IEnumerable<AssemblyLine> Ldc_I4(Instruction instruction, ICompilationContext context) => LoadConstant(instruction);
+		private IEnumerable<AssemblyLine> Ldc_I4(Instruction instruction, ICompilationContext context) => LoadConstant(instruction, context);
 
 		/// <summary>
 		/// Pushes a constant uint8 onto the stack.
@@ -401,6 +418,7 @@ namespace VCSCompiler
 
 			// Put address of instance in X.
 			yield return PLA();
+			context.EvaluationStack.Pop();
 			yield return TAX();
 
 			for (var i = 0; i < processedField.FieldType.TotalSize; i++)
@@ -409,6 +427,7 @@ namespace VCSCompiler
 				yield return LDA(byteOffset, Index.X);
 				yield return PHA();
 			}
+			context.EvaluationStack.Push(processedField.FieldType);
 		}
 
 		private IEnumerable<AssemblyLine> Ldflda(Instruction instruction, ICompilationContext context)
@@ -419,12 +438,15 @@ namespace VCSCompiler
 			var fieldOffset = containingType.FieldOffsets[processedField];
 
 			yield return PLA();
+			context.EvaluationStack.Pop();
 			if (fieldOffset != 0)
 			{
 				yield return CLC();
 				yield return ADC(fieldOffset);
 			}
 			yield return PHA();
+			// TODO - Push zeropage pointer.
+			context.EvaluationStack.Push(Types[typeof(byte).FullName]);
 		}
 
 		private IEnumerable<AssemblyLine> Ldsfld(Instruction instruction, ICompilationContext context)
@@ -437,6 +459,7 @@ namespace VCSCompiler
 			{
 				yield return LDA(LabelGenerator.GetFromField(fieldDefinition));
 				yield return PHA();
+				context.EvaluationStack.Push(processedField.FieldType);
 				yield break;
 			}
 			
@@ -444,6 +467,7 @@ namespace VCSCompiler
 			{
 				yield return LDA(LabelGenerator.GetFromField(fieldDefinition), i);
 				yield return PHA();
+				context.EvaluationStack.Push(processedField.FieldType);
 			}
 		}
 
@@ -452,22 +476,25 @@ namespace VCSCompiler
 			var fieldDefinition = (FieldDefinition)instruction.Operand;
 			yield return LDA($"#{LabelGenerator.GetFromField(fieldDefinition)}");
 			yield return PHA();
+			// TODO - Push zeropage pointer.
+			context.EvaluationStack.Push(Types[typeof(byte).FullName]);
 		}
 
 		private IEnumerable<AssemblyLine> Nop(Instruction instruction, ICompilationContext context) => Enumerable.Empty<AssemblyLine>();
 
 		private IEnumerable<AssemblyLine> Ret(Instruction instruction, ICompilationContext context)
 		{
+			// Assumes void return.
 			yield return RTS();
 		}
 
-	    private IEnumerable<AssemblyLine> Starg(Instruction instruction, ICompilationContext context) => StoreArgument(instruction);
+	    private IEnumerable<AssemblyLine> Starg(Instruction instruction, ICompilationContext context) => StoreArgument(instruction, context);
 
-		private IEnumerable<AssemblyLine> Starg_S(Instruction instruction, ICompilationContext context) => StoreArgument(instruction);
+		private IEnumerable<AssemblyLine> Starg_S(Instruction instruction, ICompilationContext context) => StoreArgument(instruction, context);
 
-	    private IEnumerable<AssemblyLine> Stloc(Instruction instruction, ICompilationContext context) => StoreLocal(instruction);
+	    private IEnumerable<AssemblyLine> Stloc(Instruction instruction, ICompilationContext context) => StoreLocal(instruction, context);
 
-	    private IEnumerable<AssemblyLine> Stloc_S(Instruction instruction, ICompilationContext context) => StoreLocal(instruction);
+	    private IEnumerable<AssemblyLine> Stloc_S(Instruction instruction, ICompilationContext context) => StoreLocal(instruction, context);
 
 		private IEnumerable<AssemblyLine> Stfld(Instruction instruction, ICompilationContext context)
 		{
@@ -510,6 +537,7 @@ namespace VCSCompiler
 					yield return STA((byte)offset, Index.X);
 				}
 			}
+			context.EvaluationStack.Pop();
 		}
 
 		private IEnumerable<AssemblyLine> Stsfld(Instruction instruction, ICompilationContext context)
@@ -521,6 +549,7 @@ namespace VCSCompiler
 			if (processedField.FieldType.TotalSize == 1)
 			{
 				yield return PLA();
+				context.EvaluationStack.Pop();
 				yield return STA(LabelGenerator.GetFromField(fieldDefinition));
 				yield break;
 			}
@@ -528,6 +557,7 @@ namespace VCSCompiler
 			for (var i = processedField.FieldType.TotalSize - 1; i >= 0; i--)
 			{
 				yield return PLA();
+				context.EvaluationStack.Pop();
 				yield return STA(LabelGenerator.GetFromField(fieldDefinition), i);
 			}
 		}
@@ -535,11 +565,14 @@ namespace VCSCompiler
 	    private IEnumerable<AssemblyLine> Sub(Instruction instruction, ICompilationContext context)
 	    {
 		    yield return PLA();
+			context.EvaluationStack.Pop();
 		    yield return STA(LabelGenerator.TemporaryRegister1);
 		    yield return PLA();
+			context.EvaluationStack.Pop();
 		    yield return SEC();
 		    yield return SBC(LabelGenerator.TemporaryRegister1);
 		    yield return PHA();
+			context.EvaluationStack.Push(Types[typeof(byte).FullName]);
 	    }
 
 		private IEnumerable<AssemblyLine> Unsupported(Instruction instruction, ICompilationContext compilationContext) => throw new UnsupportedOpCodeException(instruction.OpCode);

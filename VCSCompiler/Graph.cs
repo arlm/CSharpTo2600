@@ -56,6 +56,9 @@ namespace VCSCompiler
 			return new ImmutableGraph<T>(Nodes, newEdges.ToImmutable());
 		}
 
+		/// <summary>
+		/// Returns all nodes with an edge from the provided node.
+		/// </summary>
 		public IEnumerable<T> GetNeighbors(T node)
 		{
 			if (Edges.TryGetValue(node, out var edges))
@@ -63,6 +66,17 @@ namespace VCSCompiler
 				return edges;
 			}
 			return Enumerable.Empty<T>();
+		}
+
+		/// <summary>
+		/// Returns all nodes with an edge to the provided node.
+		/// </summary>
+		public IEnumerable<T> GetNeighborsTo(T node)
+		{
+			return Edges
+				.Keys
+				.Where(key => Edges[key].Contains(node))
+				.SelectMany(key => Edges[key]);
 		}
 
 		public IEnumerable<T> TopologicalSort()
