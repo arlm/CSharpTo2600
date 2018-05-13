@@ -13,17 +13,17 @@ namespace VCSCompiler
 {
     internal class CilCompiler
     {
-		public static IEnumerable<AssemblyLine> CompileMethod(MethodDefinition definition, ControlFlowGraph controlFlowGraph, IImmutableDictionary<string, ProcessedType> types, Assembly frameworkAssembly)
+		public static IEnumerable<AssemblyLine> CompileMethod(MethodDefinition definition, ControlFlowGraph controlFlowGraph, IImmutableDictionary<string, IProcessedType> types, Assembly frameworkAssembly)
 		{
 			var instructionCompiler = new CilInstructionCompiler(definition, types);
 			var instructions = definition.Body.Instructions;
 			var compilationActions = ProcessInstructions(instructions, types, frameworkAssembly).ToArray();
 			var instructionsToLabel = GetInstructionsToEmitLabelsFor(instructions).ToArray();
 			var compiledBody = new List<AssemblyLine>();
-			var evaluationStacks = new Dictionary<BasicBlock, Stack<ProcessedType>>();
+			var evaluationStacks = new Dictionary<BasicBlock, Stack<IProcessedType>>();
 			foreach (var block in controlFlowGraph.Graph.Nodes)
 			{
-				evaluationStacks[block] = new Stack<ProcessedType>();
+				evaluationStacks[block] = new Stack<IProcessedType>();
 			}
 
 			BasicBlock previousBasicBlock = null;
@@ -35,7 +35,7 @@ namespace VCSCompiler
 					compiledBody.Add(AssemblyFactory.Label(LabelGenerator.GetFromInstruction(toLabel)));
 				}
 
-				Stack<ProcessedType> evaluationStack = null;
+				Stack<IProcessedType> evaluationStack = null;
 				if (action is CompileCompilationAction)
 				{
 					// TODO - Move deep nesting elsewhere.

@@ -76,15 +76,15 @@ namespace VCSCompiler
 	internal interface ICompilationContext
 	{
 		CilInstructionCompiler CilInstructionCompiler { get; }
-		Stack<ProcessedType> EvaluationStack { get; }
+		Stack<IProcessedType> EvaluationStack { get; }
 	}
 
 	internal class CompilationContext : ICompilationContext
 	{
 		public CilInstructionCompiler CilInstructionCompiler { get; }
-		public Stack<ProcessedType> EvaluationStack { get; }
+		public Stack<IProcessedType> EvaluationStack { get; }
 
-		public CompilationContext(CilInstructionCompiler cilInstructionCompiler, Stack<ProcessedType> evaluationStack)
+		public CompilationContext(CilInstructionCompiler cilInstructionCompiler, Stack<IProcessedType> evaluationStack)
 		{
 			CilInstructionCompiler = cilInstructionCompiler;
 			EvaluationStack = evaluationStack;
