@@ -11,9 +11,9 @@ namespace VCSCompiler
 	{
 		public IImmutableList<CompiledSubroutine> Subroutines => ImmutableList<CompiledSubroutine>.Empty;
 
-		public string Name => $"{PointerType.Name}*";
+		public string Name => $"{(IsZeroPagePointer ? "{zp}" : string.Empty)}{PointerType.Name}*";
 
-		public string FullName => $"{PointerType.FullName}*";
+		public string FullName => $"{(IsZeroPagePointer ? "{zp}" : string.Empty)}{PointerType.FullName}*";
 
 		public IProcessedType BaseType { get; }
 
@@ -21,9 +21,9 @@ namespace VCSCompiler
 
 		public IImmutableDictionary<ProcessedField, byte> FieldOffsets => ImmutableDictionary<ProcessedField, byte>.Empty;
 
-		public int TotalSize => 2;
+		public int TotalSize => IsZeroPagePointer ? 1 : 2;
 
-		public int ThisSize => 2;
+		public int ThisSize => IsZeroPagePointer ? 1 : 2;
 
 		public TypeDefinition TypeDefinition => throw new InvalidOperationException("Pointer types do not have TypeDefinitions.");
 
@@ -31,14 +31,17 @@ namespace VCSCompiler
 
 		public bool SystemType => true;
 
+		public bool IsZeroPagePointer { get; }
+
 		IImmutableList<ProcessedSubroutine> IProcessedType.Subroutines => ImmutableList<ProcessedSubroutine>.Empty;
 
 		private readonly IProcessedType PointerType;
 
-		public PointerCompiledType(IProcessedType pointerType, IProcessedType baseType)
+		public PointerCompiledType(IProcessedType pointerType, IProcessedType baseType, bool isZeroPagePointer)
 		{
 			PointerType = pointerType;
 			BaseType = baseType;
+			IsZeroPagePointer = isZeroPagePointer;
 		}
 
 		public IProcessedType ReplaceSubroutine(ProcessedSubroutine oldSubroutine, CompiledSubroutine newSubroutine)

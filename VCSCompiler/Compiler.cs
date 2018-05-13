@@ -152,8 +152,11 @@ namespace VCSCompiler
 			var boolCompiled = new CompiledType(new ProcessedType(boolType, valueTypeCompiled, Enumerable.Empty<ProcessedField>(), ImmutableDictionary<ProcessedField, byte>.Empty, ImmutableList<ProcessedSubroutine>.Empty, 1), ImmutableList<CompiledSubroutine>.Empty);
 			Types[boolType.FullName] = boolCompiled;
 
-			var bytePointerCompiled = new PointerCompiledType(byteCompiled, objectCompiled);
+			var bytePointerCompiled = new PointerCompiledType(byteCompiled, objectCompiled, false);
 			Types[bytePointerCompiled.FullName] = bytePointerCompiled;
+
+			var zeroPageBytePointerCompiled = new PointerCompiledType(byteCompiled, objectCompiled, true);
+			Types[zeroPageBytePointerCompiled.FullName] = zeroPageBytePointerCompiled;
 		}
 
 		/// <summary>
