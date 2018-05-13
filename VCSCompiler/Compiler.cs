@@ -273,7 +273,7 @@ namespace VCSCompiler
 				}
 				else
 				{
-					body = CilCompiler.CompileMethod(subroutine.MethodDefinition, Types.ToImmutableDictionary(), FrameworkAssembly);
+					body = CilCompiler.CompileMethod(subroutine.MethodDefinition, subroutine.ControlFlowGraph, Types.ToImmutableDictionary(), FrameworkAssembly);
 				}
 
 				if (subroutine.IsEntryPoint)

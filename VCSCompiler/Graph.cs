@@ -11,10 +11,10 @@ namespace VCSCompiler
 	/// </summary>
 	internal class ImmutableGraph<T> where T: class
 	{
-		private readonly IImmutableSet<T> Nodes;
 		private readonly IImmutableDictionary<T, IImmutableSet<T>> Edges;
 
 		public static ImmutableGraph<T> Empty { get; } = new ImmutableGraph<T>(ImmutableHashSet<T>.Empty, ImmutableDictionary<T, IImmutableSet<T>>.Empty);
+		public IImmutableSet<T> Nodes { get; }
 
 		private ImmutableGraph(IImmutableSet<T> nodes, IImmutableDictionary<T, IImmutableSet<T>> edges)
 		{
@@ -41,7 +41,7 @@ namespace VCSCompiler
 			}
 			if (!Nodes.Contains(to))
 			{
-				throw new ArgumentException($"To node: '{to}' not in graph.");
+				return this.AddNode(to).AddEdge(from, to);
 			}
 
 			var newEdges = ImmutableDictionary.CreateBuilder<T, IImmutableSet<T>>();
@@ -56,6 +56,9 @@ namespace VCSCompiler
 			return new ImmutableGraph<T>(Nodes, newEdges.ToImmutable());
 		}
 
+		/// <summary>
+		/// Returns all nodes with an edge from the provided node.
+		/// </summary>
 		public IEnumerable<T> GetNeighbors(T node)
 		{
 			if (Edges.TryGetValue(node, out var edges))
@@ -63,6 +66,17 @@ namespace VCSCompiler
 				return edges;
 			}
 			return Enumerable.Empty<T>();
+		}
+
+		/// <summary>
+		/// Returns all nodes with an edge to the provided node.
+		/// </summary>
+		public IEnumerable<T> GetNeighborsTo(T node)
+		{
+			return Edges
+				.Keys
+				.Where(key => Edges[key].Contains(node))
+				.SelectMany(key => Edges[key]);
 		}
 
 		public IEnumerable<T> TopologicalSort()

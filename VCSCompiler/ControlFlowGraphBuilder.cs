@@ -116,6 +116,11 @@ namespace VCSCompiler
 		{
 			Graph = graph;
 		}
+
+		public BasicBlock BlockContainingInstruction(Instruction instruction)
+		{
+			return Graph.Nodes.SingleOrDefault(bb => bb.Instructions.Contains(instruction));
+		}
 	}
 
 	internal class BasicBlock

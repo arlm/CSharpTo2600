@@ -30,7 +30,7 @@ namespace VCSCompiler
 
 		public IEnumerable<AssemblyLine> Execute(ICompilationContext context)
 		{
-			return context.CilInstructionCompiler.CompileInstruction(Instruction);
+			return context.CilInstructionCompiler.CompileInstruction(Instruction, context);
 		}
 	}
 
@@ -76,15 +76,18 @@ namespace VCSCompiler
 	internal interface ICompilationContext
 	{
 		CilInstructionCompiler CilInstructionCompiler { get; }
+		Stack<ProcessedType> EvaluationStack { get; }
 	}
 
 	internal class CompilationContext : ICompilationContext
 	{
 		public CilInstructionCompiler CilInstructionCompiler { get; }
+		public Stack<ProcessedType> EvaluationStack { get; }
 
-		public CompilationContext(CilInstructionCompiler cilInstructionCompiler)
+		public CompilationContext(CilInstructionCompiler cilInstructionCompiler, Stack<ProcessedType> evaluationStack)
 		{
 			CilInstructionCompiler = cilInstructionCompiler;
+			EvaluationStack = evaluationStack;
 		}
 	}
 }
