@@ -30,7 +30,7 @@ namespace VCSCompiler
 
 		public IEnumerable<AssemblyLine> Execute(ICompilationContext context)
 		{
-			return context.CilInstructionCompiler.CompileInstruction(Instruction);
+			return context.CilInstructionCompiler.CompileInstruction(Instruction, context);
 		}
 	}
 

@@ -21,7 +21,7 @@ namespace VCSCompiler
 			var instructionsToLabel = GetInstructionsToEmitLabelsFor(instructions).ToArray();
 			var compiledBody = new List<AssemblyLine>();
 			var evaluationStacks = new Dictionary<BasicBlock, Stack<CompiledType>>();
-			foreach (var block in controlFlowGraph.Graph.TopologicalSort())
+			foreach (var block in controlFlowGraph.Graph.Nodes)
 			{
 				evaluationStacks[block] = new Stack<CompiledType>();
 			}

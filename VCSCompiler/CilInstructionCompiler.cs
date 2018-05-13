@@ -17,7 +17,7 @@ namespace VCSCompiler
 	/// </summary>
     internal class CilInstructionCompiler
     {
-		private readonly IImmutableDictionary<Code, Func<Instruction, IEnumerable<AssemblyLine>>> MethodMap;
+		private readonly IImmutableDictionary<Code, Func<Instruction, ICompilationContext, IEnumerable<AssemblyLine>>> MethodMap;
 		private readonly IImmutableDictionary<string, ProcessedType> Types;
 	    private readonly MethodDefinition MethodDefinition;
 	    private int CgtCount;
@@ -29,11 +29,12 @@ namespace VCSCompiler
 			Types = types;
 		}
 
-		public IEnumerable<AssemblyLine> CompileInstruction(Instruction instruction) => MethodMap[instruction.OpCode.Code](instruction);
+		public IEnumerable<AssemblyLine> CompileInstruction(Instruction instruction, ICompilationContext compilationContext)
+			=> MethodMap[instruction.OpCode.Code](instruction, compilationContext);
 
-		private IImmutableDictionary<Code, Func<Instruction, IEnumerable<AssemblyLine>>> CreateMethodMap()
+		private IImmutableDictionary<Code, Func<Instruction, ICompilationContext, IEnumerable<AssemblyLine>>> CreateMethodMap()
 		{
-			var dictionary = new Dictionary<Code, Func<Instruction, IEnumerable<AssemblyLine>>>();
+			var dictionary = new Dictionary<Code, Func<Instruction, ICompilationContext, IEnumerable<AssemblyLine>>>();
 			var typeInfo = typeof(CilInstructionCompiler).GetTypeInfo();
 			var opCodes = Enum.GetValues(typeof(Code)).Cast<Code>();
 			foreach (var opCode in opCodes)
@@ -57,7 +58,7 @@ namespace VCSCompiler
 				}
 				var method = typeInfo.GetMethod(name, BindingFlags.NonPublic | BindingFlags.Instance);
 				dictionary[opCode]
-					= (Func<Instruction, IEnumerable<AssemblyLine>>)method?.CreateDelegate(typeof(Func<Instruction, IEnumerable<AssemblyLine>>), this)
+					= (Func<Instruction, ICompilationContext, IEnumerable<AssemblyLine>>)method?.CreateDelegate(typeof(Func<Instruction, ICompilationContext, IEnumerable<AssemblyLine>>), this)
 					?? Unsupported;
 			}
 			return dictionary.ToImmutableDictionary();
@@ -205,7 +206,7 @@ namespace VCSCompiler
 		    yield return STA(LabelGenerator.GetFromVariable(MethodDefinition, local));
 	    }
 
-		private IEnumerable<AssemblyLine> Add(Instruction instruction)
+		private IEnumerable<AssemblyLine> Add(Instruction instruction, ICompilationContext context)
 		{
 			// TODO - Should probably just allocate a couple address locations instead of trying to use the stack operations.
 			yield return PLA();
@@ -216,22 +217,22 @@ namespace VCSCompiler
 			yield return PHA();
 		}
 
-	    private IEnumerable<AssemblyLine> Br(Instruction instruction)
+	    private IEnumerable<AssemblyLine> Br(Instruction instruction, ICompilationContext context)
 	    {
 			yield return JMP(LabelGenerator.GetFromInstruction((Instruction)instruction.Operand));
 		}
 
-	    private IEnumerable<AssemblyLine> Br_S(Instruction instruction) => Br(instruction);
+	    private IEnumerable<AssemblyLine> Br_S(Instruction instruction, ICompilationContext context) => Br(instruction, context);
 
-	    private IEnumerable<AssemblyLine> Brtrue(Instruction instruction)
+	    private IEnumerable<AssemblyLine> Brtrue(Instruction instruction, ICompilationContext context)
 	    {
 			yield return PLA();
 		    yield return BNE(LabelGenerator.GetFromInstruction((Instruction)instruction.Operand));
 		}
 
-	    private IEnumerable<AssemblyLine> Brtrue_S(Instruction instruction) => Brtrue(instruction);
+	    private IEnumerable<AssemblyLine> Brtrue_S(Instruction instruction, ICompilationContext context) => Brtrue(instruction, context);
 
-		private IEnumerable<AssemblyLine> Call(Instruction instruction)
+		private IEnumerable<AssemblyLine> Call(Instruction instruction, ICompilationContext context)
 		{
 			// Could be either a MethodDefinition or MethodReference.
 			MethodReference method = (MethodReference)instruction.Operand;
@@ -326,7 +327,7 @@ namespace VCSCompiler
 			yield return JSR(LabelGenerator.GetFromMethod(method));
 		}
 
-	    private IEnumerable<AssemblyLine> Cgt_Un(Instruction instruction)
+	    private IEnumerable<AssemblyLine> Cgt_Un(Instruction instruction, ICompilationContext context)
 	    {
 			// CLI says to push a 1 if true, 0 if false.
 		    var endLabel = Label($"__CGT_UN_END_{CgtCount}");
@@ -355,9 +356,9 @@ namespace VCSCompiler
 		/// <summary>
 		/// Convert value on stack to int8, which it already should be.
 		/// </summary>
-		private IEnumerable<AssemblyLine> Conv_U1(Instruction instruction) => Enumerable.Empty<AssemblyLine>();
+		private IEnumerable<AssemblyLine> Conv_U1(Instruction instruction, ICompilationContext context) => Enumerable.Empty<AssemblyLine>();
 
-		private IEnumerable<AssemblyLine> Initobj(Instruction instruction)
+		private IEnumerable<AssemblyLine> Initobj(Instruction instruction, ICompilationContext context)
 		{
 			var typeDefinition = (TypeDefinition)instruction.Operand;
 			var processedType = Types[typeDefinition.FullName];
@@ -372,27 +373,27 @@ namespace VCSCompiler
 			}
 		}
 
-	    private IEnumerable<AssemblyLine> Ldarg(Instruction instruction) => LoadArgument(instruction);
+	    private IEnumerable<AssemblyLine> Ldarg(Instruction instruction, ICompilationContext context) => LoadArgument(instruction);
 
-	    private IEnumerable<AssemblyLine> Ldarg_S(Instruction instruction) => LoadArgument(instruction);
+	    private IEnumerable<AssemblyLine> Ldarg_S(Instruction instruction, ICompilationContext context) => LoadArgument(instruction);
 
-	    private IEnumerable<AssemblyLine> Ldloc(Instruction instruction) => LoadLocal(instruction);
+	    private IEnumerable<AssemblyLine> Ldloc(Instruction instruction, ICompilationContext context) => LoadLocal(instruction);
 
-	    private IEnumerable<AssemblyLine> Ldloc_S(Instruction instruction) => LoadLocal(instruction);
-
-		/// <summary>
-		/// Pushes a constant uint8 onto the stack.
-		/// </summary>
-		/// <remarks>The spec says to push an int32, but that's impractical.</remarks>
-		private IEnumerable<AssemblyLine> Ldc_I4(Instruction instruction) => LoadConstant(instruction);
+	    private IEnumerable<AssemblyLine> Ldloc_S(Instruction instruction, ICompilationContext context) => LoadLocal(instruction);
 
 		/// <summary>
 		/// Pushes a constant uint8 onto the stack.
 		/// </summary>
 		/// <remarks>The spec says to push an int32, but that's impractical.</remarks>
-		private IEnumerable<AssemblyLine> Ldc_I4_S(Instruction instruction) => Ldc_I4(instruction);
+		private IEnumerable<AssemblyLine> Ldc_I4(Instruction instruction, ICompilationContext context) => LoadConstant(instruction);
 
-		private IEnumerable<AssemblyLine> Ldfld(Instruction instruction)
+		/// <summary>
+		/// Pushes a constant uint8 onto the stack.
+		/// </summary>
+		/// <remarks>The spec says to push an int32, but that's impractical.</remarks>
+		private IEnumerable<AssemblyLine> Ldc_I4_S(Instruction instruction, ICompilationContext context) => Ldc_I4(instruction, context);
+
+		private IEnumerable<AssemblyLine> Ldfld(Instruction instruction, ICompilationContext context)
 		{
 			var fieldDefinition = (FieldDefinition)instruction.Operand;
 
@@ -410,7 +411,7 @@ namespace VCSCompiler
 			}
 		}
 
-		private IEnumerable<AssemblyLine> Ldflda(Instruction instruction)
+		private IEnumerable<AssemblyLine> Ldflda(Instruction instruction, ICompilationContext context)
 		{
 			var fieldDefinition = (FieldDefinition)instruction.Operand;
 
@@ -426,7 +427,7 @@ namespace VCSCompiler
 			yield return PHA();
 		}
 
-		private IEnumerable<AssemblyLine> Ldsfld(Instruction instruction)
+		private IEnumerable<AssemblyLine> Ldsfld(Instruction instruction, ICompilationContext context)
 		{
 			var fieldDefinition = (FieldDefinition)instruction.Operand;
 
@@ -446,29 +447,29 @@ namespace VCSCompiler
 			}
 		}
 
-		private IEnumerable<AssemblyLine> Ldsflda(Instruction instruction)
+		private IEnumerable<AssemblyLine> Ldsflda(Instruction instruction, ICompilationContext context)
 		{
 			var fieldDefinition = (FieldDefinition)instruction.Operand;
 			yield return LDA($"#{LabelGenerator.GetFromField(fieldDefinition)}");
 			yield return PHA();
 		}
 
-		private IEnumerable<AssemblyLine> Nop(Instruction instruction) => Enumerable.Empty<AssemblyLine>();
+		private IEnumerable<AssemblyLine> Nop(Instruction instruction, ICompilationContext context) => Enumerable.Empty<AssemblyLine>();
 
-		private IEnumerable<AssemblyLine> Ret(Instruction instruction)
+		private IEnumerable<AssemblyLine> Ret(Instruction instruction, ICompilationContext context)
 		{
 			yield return RTS();
 		}
 
-	    private IEnumerable<AssemblyLine> Starg(Instruction instruction) => StoreArgument(instruction);
+	    private IEnumerable<AssemblyLine> Starg(Instruction instruction, ICompilationContext context) => StoreArgument(instruction);
 
-		private IEnumerable<AssemblyLine> Starg_S(Instruction instruction) => StoreArgument(instruction);
+		private IEnumerable<AssemblyLine> Starg_S(Instruction instruction, ICompilationContext context) => StoreArgument(instruction);
 
-	    private IEnumerable<AssemblyLine> Stloc(Instruction instruction) => StoreLocal(instruction);
+	    private IEnumerable<AssemblyLine> Stloc(Instruction instruction, ICompilationContext context) => StoreLocal(instruction);
 
-	    private IEnumerable<AssemblyLine> Stloc_S(Instruction instruction) => StoreLocal(instruction);
+	    private IEnumerable<AssemblyLine> Stloc_S(Instruction instruction, ICompilationContext context) => StoreLocal(instruction);
 
-		private IEnumerable<AssemblyLine> Stfld(Instruction instruction)
+		private IEnumerable<AssemblyLine> Stfld(Instruction instruction, ICompilationContext context)
 		{
 			var fieldDefinition = (FieldDefinition)instruction.Operand;
 
@@ -511,7 +512,7 @@ namespace VCSCompiler
 			}
 		}
 
-		private IEnumerable<AssemblyLine> Stsfld(Instruction instruction)
+		private IEnumerable<AssemblyLine> Stsfld(Instruction instruction, ICompilationContext context)
 		{
 			var fieldDefinition = (FieldDefinition)instruction.Operand;
 
@@ -531,7 +532,7 @@ namespace VCSCompiler
 			}
 		}
 
-	    private IEnumerable<AssemblyLine> Sub(Instruction instruction)
+	    private IEnumerable<AssemblyLine> Sub(Instruction instruction, ICompilationContext context)
 	    {
 		    yield return PLA();
 		    yield return STA(LabelGenerator.TemporaryRegister1);
@@ -541,7 +542,7 @@ namespace VCSCompiler
 		    yield return PHA();
 	    }
 
-		private IEnumerable<AssemblyLine> Unsupported(Instruction instruction) => throw new UnsupportedOpCodeException(instruction.OpCode);
+		private IEnumerable<AssemblyLine> Unsupported(Instruction instruction, ICompilationContext compilationContext) => throw new UnsupportedOpCodeException(instruction.OpCode);
 
 		private (ProcessedType ContainingType, ProcessedField ProcessedField) GetProcessedInfo(FieldDefinition fieldDefinition)
 		{

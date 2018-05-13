@@ -41,7 +41,7 @@ namespace VCSCompiler
 			}
 			if (!Nodes.Contains(to))
 			{
-				throw new ArgumentException($"To node: '{to}' not in graph.");
+				return this.AddNode(to).AddEdge(from, to);
 			}
 
 			var newEdges = ImmutableDictionary.CreateBuilder<T, IImmutableSet<T>>();
