@@ -129,7 +129,7 @@ namespace VCSCompiler
 		{
 			var system = AssemblyDefinition.ReadAssembly(typeof(object).GetTypeInfo().Assembly.Location);
 			var sys = AssemblyDefinition.ReadAssembly(typeof(byte*).GetTypeInfo().Assembly.Location);
-			var supportedTypes = new[] { "Object", "ValueType", "Void", "Byte", "Boolean" };
+			var supportedTypes = new[] { "Object", "ValueType", "Void", "Byte", "UInt16", "Boolean" };
 			var types = system.Modules[0].Types.Where(td => supportedTypes.Contains(td.Name)).ToImmutableArray();
 
 			var objectType = types.Single(x => x.Name == "Object");
@@ -147,6 +147,11 @@ namespace VCSCompiler
 			var byteType = types.Single(x => x.Name == "Byte");
 			var byteCompiled = new CompiledType(new ProcessedType(byteType, valueTypeCompiled, Enumerable.Empty<ProcessedField>(), ImmutableDictionary<ProcessedField, byte>.Empty, ImmutableList<ProcessedSubroutine>.Empty, 1), ImmutableList<CompiledSubroutine>.Empty);
 			Types[byteType.FullName] = byteCompiled;
+			
+			// TODO - Probably should be concerned about endianness. Especially for pointers.
+			var uShortType = types.Single(x => x.Name == "UInt16");
+			var uShortCompiled = new CompiledType(new ProcessedType(uShortType, valueTypeCompiled, Enumerable.Empty<ProcessedField>(), ImmutableDictionary<ProcessedField, byte>.Empty, ImmutableList<ProcessedSubroutine>.Empty, 2), ImmutableList<CompiledSubroutine>.Empty);
+			Types[uShortType.FullName] = uShortCompiled;
 
 			var boolType = types.Single(x => x.Name == "Boolean");
 			var boolCompiled = new CompiledType(new ProcessedType(boolType, valueTypeCompiled, Enumerable.Empty<ProcessedField>(), ImmutableDictionary<ProcessedField, byte>.Empty, ImmutableList<ProcessedSubroutine>.Empty, 1), ImmutableList<CompiledSubroutine>.Empty);
@@ -190,6 +195,14 @@ namespace VCSCompiler
 
 			ProcessedField ProcessField(FieldDefinition field)
 			{
+				// TODO - Generalize the concept of a CompileTimeConstant, don't limit it to just byte* type fields.
+				if (field.FieldType.FullName.Contains("Byte*"))
+				{
+					// TODO - Check for RomData.
+					// TODO - Need to determine the actual location in ROM to place the associated RomData. Needs to either be determined ahead of time
+					// or given some label that can be replaced later in time.
+					return new ProcessedField(field, new CompileTimeConstant<ushort>(0xBAAD, Types.Values.Single(t => t.Name == "Byte*")));
+				}
 				return new ProcessedField(field, Types[field.FieldType.FullName]);
 			}
 

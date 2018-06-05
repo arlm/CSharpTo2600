@@ -26,6 +26,8 @@ namespace VCSCompiler
 					return new OverrideWithStoreToSymbolAttribute(source.Symbol, source.Strobe);
 				case nameof(OverrideWithLoadToRegisterAttribute):
 					return new OverrideWithLoadToRegisterAttribute(source.Register);
+				case nameof(RomDataAttribute):
+					return new RomDataAttribute(source.Data);
 				case nameof(UseProvidedImplementationAttribute):
 					return new UseProvidedImplementationAttribute(source.ImplementationName);
 				case nameof(DoNotCompileAttribute):

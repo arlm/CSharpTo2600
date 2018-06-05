@@ -278,6 +278,14 @@ namespace VCSFramework.Assembly
 		}
 
 		/// <summary>
+		/// Load Accumulator with Memory [Absolute] (4 cycles)
+		/// </summary>
+		public static AssemblyInstruction LDA(ushort address)
+		{
+			return new AssemblyInstruction("LDA", $"${address.ToString("X4")}", 4, 3);
+		}
+
+		/// <summary>
 		/// Load X Register [Immediate] (2 cycles)
 		/// </summary>
 		public static AssemblyInstruction LDX(byte Value)

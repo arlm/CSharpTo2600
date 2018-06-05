@@ -138,7 +138,7 @@ namespace VCSCompiler
 		{
 			yield return LDA(value);
 			yield return PHA();
-			context.EvaluationStack.Push(Types[typeof(byte).FullName]);
+			context.EvaluationStack.Push(new CompileTimeConstant<byte>(value, Types[typeof(byte).FullName]));
 		}
 
 	    private IEnumerable<AssemblyLine> LoadLocal(Instruction instruction, ICompilationContext context)
@@ -449,11 +449,43 @@ namespace VCSCompiler
 			context.EvaluationStack.Push(Types[typeof(byte).FullName]);
 		}
 
+		private IEnumerable<AssemblyLine> Ldind_U1(Instruction instruction, ICompilationContext context)
+		{
+			// We know it must be a pointer of some variety.
+			var pointer = context.EvaluationStack.Pop();
+			if (pointer is CompileTimeConstant constant)
+			{
+				var pointerType = (PointerCompiledType)constant.Type;
+				if (pointerType.IsZeroPagePointer)
+				{
+					throw new NotImplementedException("Zero-page pointers for Ldind_U1 are not currently supported.");
+				}
+				else
+				{
+					var address = (ushort)constant.Value;
+					yield return LDA(address);
+					yield return PHA();
+					context.EvaluationStack.Push(Types[typeof(byte).FullName]);
+					yield break;
+				}
+			}
+			else
+			{
+				throw new NotImplementedException("Only CompileTimeConstant values for Ldind_U1 are currently supported.");
+			}
+		}
+
 		private IEnumerable<AssemblyLine> Ldsfld(Instruction instruction, ICompilationContext context)
 		{
 			var fieldDefinition = (FieldDefinition)instruction.Operand;
 
 			var (_, processedField) = GetProcessedInfo(fieldDefinition);
+
+			if (processedField.FieldType is CompileTimeConstant constant)
+			{
+				context.EvaluationStack.Push(constant);
+				yield break;
+			}
 
 			if (processedField.FieldType.TotalSize == 1)
 			{

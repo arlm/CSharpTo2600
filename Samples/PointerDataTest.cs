@@ -10,7 +10,7 @@ namespace Samples
 
 		public static void Main()
 		{
-			ColuBk = Data[1];
+			ColuBk = Data[0];
 		}
     }
 }
